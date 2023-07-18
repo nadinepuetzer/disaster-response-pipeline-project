@@ -16,7 +16,7 @@ from nltk.stem import WordNetLemmatizer
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV
@@ -77,7 +77,7 @@ def build_model():
 #        ('features', FeatureUnion([
 #    
 #            ('text_pipeline', Pipeline([
-#                ('vect', CountVectorizer(tokenizer=tokenize)),
+#                ('vect', CountTransformer(tokenizer=tokenize)),
 #                ('tfidf', TfidfVectorizer())
 #            ])),
 #
