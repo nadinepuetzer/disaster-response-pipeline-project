@@ -16,15 +16,14 @@ from nltk.stem import WordNetLemmatizer
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import FeatureUnion
 from sklearn.neighbors import KNeighborsClassifier
-
-
+from sklearn.ensemble import GradientBoostingClassifier
 
 
 def load_data(database_filepath):
@@ -73,69 +72,47 @@ class StartingVerbExtractor(BaseEstimator, TransformerMixin):
     
 
 def build_model():
-    
-    #pipeline parameters
-    parameters = [
-        {
-            'clf': [MultiOutputClassifier(RandomForestClassifier())], 
-    #        'features__text_pipeline__vect__ngram_range': ((1, 1), (1, 2)),
-    #        'features__text_pipeline__tfidf__estimator__stop_words': ['english', None],
-            'clf__estimator__n_estimators': [50, 100, 200],
-            'clf__estimator__min_samples_split': [2, 3, 4]
-        },
-        {
-            'clf': [MultiOutputClassifier(KNeighborsClassifier())],
-    #        'features__text_pipeline__vect__ngram_range': ((1, 1), (1, 2)),
-    #        'features__text_pipeline__tfidf__estimator__stop_words': ['english', None],
-            'clf__estimator__n_neighbors': list(range(1, 31))
-        }
-    ]
+#    #define the pipeline with transformers and models
+#    pipeline = Pipeline([
+#        ('features', FeatureUnion([
+#    
+#            ('text_pipeline', Pipeline([
+#                ('vect', CountVectorizer(tokenizer=tokenize)),
+#                ('tfidf', TfidfVectorizer())
+#            ])),
+#
+#            ('starting_verb', StartingVerbExtractor())
+#        ])),
+#        ('model1', MultiOutputClassifier(RandomForestClassifier())),
+#        ('model2', MultiOutputClassifier(KNeighborsClassifier()))
+#    ])
+#
+#    #define parameter grid
+#    parameters = {
+#            'model1__estimator__n_estimators': [50, 100, 200],
+#            'model1__estimator__min_samples_split': [2, 3, 4],
+#            'model2__estimator__n_neighbors': list(range(1, 31))
+#        }
 
-    #evaluating multiple classifiers based on pipeline parameters
-    result=[]
+    # Define the pipeline with transformers and models
+    pipeline = Pipeline([
+        ('tfidf', TfidfVectorizer()),
+        ('model1', RandomForestClassifier()),
+        ('model2', GradientBoostingClassifier())
+    ])
+    # Define the hyperparameter grid for transformers and models
+    param_grid = {
+        'tfidf__max_features': [1000, 2000, 3000],
+        'model1__n_estimators': [100, 200, 300],
+        'model1__max_depth': [None, 5, 10],
+        'model2__n_estimators': [100, 200, 300],
+        'model2__learning_rate': [0.1, 0.2, 0.3]
+    }
+    # Perform grid search using the pipeline
+    model = GridSearchCV(pipeline, param_grid, cv=3)
 
-    for params in parameters:
-
-        #classifier
-        clf = params['clf'][0]
-
-        #getting arguments by popping out classifier
-        params.pop('clf')
-
-        #pipeline
-        pipeline = Pipeline([
-            ('features', FeatureUnion([
-
-                ('text_pipeline', Pipeline([
-                    ('vect', CountVectorizer(tokenizer=tokenize)),
-                    ('tfidf', TfidfTransformer())
-                ])),
-
-                ('starting_verb', StartingVerbExtractor())
-            ])),
-
-            ('clf', clf)
-        ])
-
-        #cross validation using GridSearchCV
-        cv = GridSearchCV(pipeline, param_grid=params, cv=2, refit=True, n_jobs=-1)
-        cv.fit(X_train, y_train)
-
-        #storing result
-        result.append\
-        (
-            {
-                'grid': cv,
-                'classifier': cv.best_estimator_,
-                'best score': cv.best_score_,
-                'best params': cv.best_params_,
-                'cv': cv.cv
-            }
-        )
-
-    #sorting result by best score
-    result = sorted(result, key=itemgetter('best score'),reverse=True)
-    model = result[0]['grid']
+    #cross validation using GridSearchCV
+    #model = GridSearchCV(pipeline, param_grid=parameters, cv=2, refit=True, n_jobs=-1)
 
     return model
 
