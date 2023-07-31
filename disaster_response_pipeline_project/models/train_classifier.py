@@ -73,43 +73,42 @@ class StartingVerbExtractor(BaseEstimator, TransformerMixin):
 
 def build_model():
 #    #define the pipeline with transformers and models
-#    pipeline = Pipeline([
-#        ('features', FeatureUnion([
-#    
-#            ('text_pipeline', Pipeline([
-#                ('vect', CountTransformer(tokenizer=tokenize)),
-#                ('tfidf', TfidfVectorizer())
-#            ])),
-#
-#            ('starting_verb', StartingVerbExtractor())
-#        ])),
-#        ('model1', MultiOutputClassifier(RandomForestClassifier())),
-#        ('model2', MultiOutputClassifier(KNeighborsClassifier()))
-#    ])
-#
-#    #define parameter grid
-#    parameters = {
-#            'model1__estimator__n_estimators': [50, 100, 200],
-#            'model1__estimator__min_samples_split': [2, 3, 4],
-#            'model2__estimator__n_neighbors': list(range(1, 31))
-#        }
+    pipeline =  Pipeline([
+            ('vect', CountVectorizer(tokenizer=tokenize)),
+            ('tfidf', TfidfTransformer()),
+            ('clf', MultiOutputClassifier(RandomForestClassifier()))
+        ])
+
+
+    parameters = {
+            'clf__estimator__n_estimators': [50, 100, 200],
+           'clf__estimator__max_depth': [None, 5, 10, 20],
+    #       'estimator__max_depth': [None, 10, 20, 30, 40, 50],
+    #       'estimator__max_features': ['auto', 'sqrt', 'log2'],
+    #       'clf__estimator__min_samples_leaf': [1, 2, 4],
+    #       'clf__estimator__bootstrap': [True, False],
+            'clf__estimator__min_samples_split': [2, 3, 4]
+
+        }    
 
     # Define the pipeline with transformers and models
-    pipeline = Pipeline([
-        ('tfidf', TfidfVectorizer()),
-        ('model1', RandomForestClassifier()),
-        ('model2', GradientBoostingClassifier())
-    ])
+    #pipeline = Pipeline([
+    #    ('tfidf', TfidfVectorizer()),
+    #    ('model1', RandomForestClassifier()),
+    #    ('model2', GradientBoostingClassifier())
+    #])
     # Define the hyperparameter grid for transformers and models
-    param_grid = {
-        'tfidf__max_features': [1000, 2000, 3000],
-        'model1__n_estimators': [100, 200, 300],
-        'model1__max_depth': [None, 5, 10],
-        'model2__n_estimators': [100, 200, 300],
-        'model2__learning_rate': [0.1, 0.2, 0.3]
-    }
+    #param_grid = {
+    #    'tfidf__max_features': [1000, 2000, 3000],
+    #    'model1__n_estimators': [100, 200, 300],
+    #    'model1__max_depth': [None, 5, 10],
+    #    'model2__n_estimators': [100, 200, 300],
+    #    'model2__learning_rate': [0.1, 0.2, 0.3]
+    #}
+
+
     # Perform grid search using the pipeline
-    model = GridSearchCV(pipeline, param_grid, cv=3)
+    model = GridSearchCV(pipeline, param_grid=parameters, cv=3, n_jobs=-1)
 
     #cross validation using GridSearchCV
     #model = GridSearchCV(pipeline, param_grid=parameters, cv=2, refit=True, n_jobs=-1)
@@ -125,18 +124,20 @@ def evaluate_model(model, X_test, Y_test, category_names):
     model_eval = pd.DataFrame(columns=['target_category','accuracy','precision','recall'])
 
     for col in range(0,len(category_names)):
+    
         report = classification_report(Y_test.values[col], Y_pred[col],output_dict=True)
-        #print("Category: {}, Accuracy: {:0.2f}, Precision: {:0.2f}, Recall: {:0.2f}".format(category_names[col],report['accuracy'], report['macro avg']['precision'], report['macro avg']['recall']))
-        result = pd.DataFrame({"target_category":category_names[col],
+        result_dict = {"target_category":category_names[col],
                     "accuracy":report['accuracy'], 
                     "precision": report['macro avg']['precision'],
                     "recall": report['macro avg']['recall']
-                    })
-        model_eval.append(result)
-        print('Model Accuracy: ',model_eval['accuracy'].mean(),'(+/- ', model_eval['accuracy'].std(),')/n ' /
-              'Model Precision: ',model_eval['precision'].mean(),'(+/- ', model_eval['precision'].std(),')/n ' /
-              'Model Recall: ',model_eval['recall'].mean(),'(+/- ', model_eval['recall'].std(),')' )
-              
+                    }
+        result = pd.DataFrame([result_dict])
+        model_eval = model_eval.append(result)
+
+    print('Model Accuracy: ',model_eval['accuracy'].mean(),'(+/- ', model_eval['accuracy'].std(),')\n ' 
+          'Model Precision: ',model_eval['precision'].mean(),'(+/- ', model_eval['precision'].std(),')\n ' 
+          'Model Recall: ',model_eval['recall'].mean(),'(+/- ', model_eval['recall'].std(),')' )
+            
 
 
 def save_model(model, model_filepath):
