@@ -71,47 +71,10 @@ class StartingVerbExtractor(BaseEstimator, TransformerMixin):
         return pd.DataFrame(X_tagged)
     
 
-def build_model():
-#    #define the pipeline with transformers and models
-    pipeline =  Pipeline([
-            ('vect', CountVectorizer(tokenizer=tokenize)),
-            ('tfidf', TfidfTransformer()),
-            ('clf', MultiOutputClassifier(RandomForestClassifier()))
-        ])
-
-
-    parameters = {
-            'clf__estimator__n_estimators': [50, 100, 200],
-           'clf__estimator__max_depth': [None, 5, 10, 20],
-    #       'estimator__max_depth': [None, 10, 20, 30, 40, 50],
-    #       'estimator__max_features': ['auto', 'sqrt', 'log2'],
-    #       'clf__estimator__min_samples_leaf': [1, 2, 4],
-    #       'clf__estimator__bootstrap': [True, False],
-            'clf__estimator__min_samples_split': [2, 3, 4]
-
-        }    
-
-    # Define the pipeline with transformers and models
-    #pipeline = Pipeline([
-    #    ('tfidf', TfidfVectorizer()),
-    #    ('model1', RandomForestClassifier()),
-    #    ('model2', GradientBoostingClassifier())
-    #])
-    # Define the hyperparameter grid for transformers and models
-    #param_grid = {
-    #    'tfidf__max_features': [1000, 2000, 3000],
-    #    'model1__n_estimators': [100, 200, 300],
-    #    'model1__max_depth': [None, 5, 10],
-    #    'model2__n_estimators': [100, 200, 300],
-    #    'model2__learning_rate': [0.1, 0.2, 0.3]
-    #}
-
-
+def build_model(pipeline, parameters):
+     
     # Perform grid search using the pipeline
     model = GridSearchCV(pipeline, param_grid=parameters, cv=3, n_jobs=-1)
-
-    #cross validation using GridSearchCV
-    #model = GridSearchCV(pipeline, param_grid=parameters, cv=2, refit=True, n_jobs=-1)
 
     return model
 
@@ -125,7 +88,7 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
     for col in range(0,len(category_names)):
     
-        report = classification_report(Y_test.values[col], Y_pred[col],output_dict=True)
+        report = classification_report(Y_test.values[col], Y_pred[col],output_dict=True,zero_division=0.0)
         result_dict = {"target_category":category_names[col],
                     "accuracy":report['accuracy'], 
                     "precision": report['macro avg']['precision'],
@@ -137,8 +100,9 @@ def evaluate_model(model, X_test, Y_test, category_names):
     print('Model Accuracy: ',model_eval['accuracy'].mean(),'(+/- ', model_eval['accuracy'].std(),')\n ' 
           'Model Precision: ',model_eval['precision'].mean(),'(+/- ', model_eval['precision'].std(),')\n ' 
           'Model Recall: ',model_eval['recall'].mean(),'(+/- ', model_eval['recall'].std(),')' )
-            
 
+    return model_eval
+  
 
 def save_model(model, model_filepath):
     #saving best classifier as pickle
@@ -152,17 +116,50 @@ def main():
         X, Y, category_names = load_data(database_filepath)
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
         
+        #define the pipeline with transformers and models
+        pipeline =  Pipeline([
+                ('vect', CountVectorizer(tokenizer=tokenize)),
+                ('tfidf', TfidfTransformer()),
+                ('clf', MultiOutputClassifier(RandomForestClassifier()))
+            ])
+        
+        parameters = {
+                'clf__estimator__n_estimators': [50, 100, 200],
+                'clf__estimator__max_depth': [None, 5, 10, 20],
+                'clf__estimator__min_samples_split': [2, 3, 4]
+            }   
+        
+
+        pipeline2 =  Pipeline([
+                ('vect', CountVectorizer(tokenizer=tokenize)),
+                ('tfidf', TfidfTransformer()),
+                ('clf', MultiOutputClassifier(KNeighborsClassifier()))
+            ])
+
+        parameters2 = {
+                'clf__estimator__n_neighbors': list(range(1, 31))
+            }  
+
         print('Building model...')
-        model = build_model()
+        model1 = build_model(pipeline, parameters)
+        model2 = build_model(pipeline2, parameters2)
         
         print('Training model...')
-        model.fit(X_train, Y_train)
-        
+        model1.fit(X_train, Y_train)
+        model2.fit(X_train, Y_train)
+
         print('Evaluating model...')
-        evaluate_model(model, X_test, Y_test, category_names)
+        result1 = evaluate_model(model1, X_test, Y_test, category_names)
+        result2 = evaluate_model(model2, X_test, Y_test, category_names)
+
+        print('Determine best model...')
+        if result1['accuracy'].mean() > result2['accuracy'].mean():
+            best_model = model1
+        elif result1['accuracy'].mean() < result2['accuracy'].mean():
+            best_model = model2
 
         print('Saving model...\n    MODEL: {}'.format(model_filepath))
-        save_model(model, model_filepath)
+        save_model(best_model, model_filepath)
 
         print('Trained model saved!')
 
