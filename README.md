@@ -1,6 +1,11 @@
 # Project Overview
-... Some information to the goal of the project, the data sets provided and the result...
+Using data engineering to construct ETL and NLP workflows and develop a Flask-based application for disaster relief.
 
+In this project, I am using my expertise in data engineering and data science to explore disaster-related data from Figure 8. The goal is to use an API to create a model that can effectively categorize messages about disasters.
+
+The project includes a dataset of authentic messages sent during various disaster events. I am in the process of developing a machine learning pipeline to classify these incidents and facilitate their targeted routing to the appropriate disaster response organizations.
+
+The project includes the creation of a web application tailored to the needs of emergency personnel. This platform allows the entry of new reports, which are then subjected to classification according to several categories. In addition, the web application provides graphical representations of the data.
 
 # Project Components
 The project includes the following three components.

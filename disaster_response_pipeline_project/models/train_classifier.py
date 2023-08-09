@@ -1,6 +1,6 @@
 import sys
 import nltk
-nltk.download(['punkt', 'wordnet','averaged_perceptron_tagger'])
+nltk.download(['punkt', 'wordnet','stopwords','averaged_perceptron_tagger','maxent_ne_chunker','words'])
 
 # import libraries
 import pandas as pd
@@ -8,10 +8,13 @@ import numpy as np
 from sqlalchemy import create_engine
 from operator import itemgetter
 import joblib
-
+import re
 
 from nltk import word_tokenize
 from nltk.stem import WordNetLemmatizer
+from nltk.stem.porter import PorterStemmer
+from nltk.corpus import stopwords
+from nltk import pos_tag, ne_chunk
 
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
@@ -47,39 +50,31 @@ def load_data(database_filepath):
 
 def tokenize(text):
     '''
-    Tokenization function to process text data using word tokenization and lemmatizer
+    Tokenization function to process text data using word tokenization, stemming and lemmatizer
     - Imput: Complete text as string
     - Output: Clean tokens
     '''
-    tokens = word_tokenize(text)
-    lemmatizer = WordNetLemmatizer()
 
-    clean_tokens = []
-    for tok in tokens:
-        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
-        clean_tokens.append(clean_tok)
+    # normalizing all the text
+    text = text.lower()
 
-    return clean_tokens
+    # removing extra characters
+    text = re.sub(r"[^a-zA-Z0-9]", " ", text)
 
+    # tokenizing all the sentences
+    words = word_tokenize(text)
 
-##Additional Features
-# class StartingVerbExtractor(BaseEstimator, TransformerMixin):
+    # removing stopwords
+    words = [w for w in words if w not in stopwords.words("english")]
 
-#     def starting_verb(self, text):
-#         sentence_list = nltk.sent_tokenize(text)
-#         for sentence in sentence_list:
-#             pos_tags = nltk.pos_tag(tokenize(sentence))
-#             first_word, first_tag = pos_tags[0]
-#             if first_tag in ['VB', 'VBP'] or first_word == 'RT':
-#                 return True
-#         return False
+    # Reduce words to their stems
+    stemmed = [PorterStemmer().stem(w) for w in words]
 
-#     def fit(self, x, y=None):
-#         return self
+    # Lemmatize verbs by specifying pos
+    lemmed = [WordNetLemmatizer().lemmatize(w, pos='v') for w in stemmed]
 
-#     def transform(self, X):
-#         X_tagged = pd.Series(X).apply(self.starting_verb)
-#         return pd.DataFrame(X_tagged)
+    return lemmed
+
     
 
 def build_model(pipeline, parameters):

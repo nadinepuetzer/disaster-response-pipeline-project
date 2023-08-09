@@ -63,8 +63,46 @@ def index():
                 'xaxis': {
                     'title': "Genre"
                 }
+
+            }
+        },
+        {
+            'data': [
+                Bar(
+                    x= related_names,
+                    y= rel_count
+                )
+            ],
+
+            'layout': {
+                'title': 'Distribution of Message Relevance',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Relevance"
+                }
+            }
+        },
+        {
+            'data': [
+                Bar(
+                    x= popular_words_label,
+                    y= popular_words
+                )
+            ],
+
+            'layout': {
+                'title': 'Top Popular Words',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Words"
+                }
             }
         }
+
     ]
     
     # encode plotly graphs in JSON
