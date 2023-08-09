@@ -23,7 +23,8 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import FeatureUnion
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.ensemble import GradientBoostingClassifier
+
+
 
 
 def load_data(database_filepath):
@@ -81,7 +82,7 @@ def tokenize(text):
 #         return pd.DataFrame(X_tagged)
     
 
-def build_model():
+def build_model(pipeline, parameters):
     '''
     Trains pipeline
     - Split data into train and test sets
