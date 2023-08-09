@@ -4,6 +4,8 @@ import pandas as pd
 
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+
 
 from flask import Flask
 from flask import render_template, request, jsonify
@@ -43,6 +45,14 @@ def index():
     # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
+
+    related = df.related
+    rel_count = related.value_counts()
+    related_names = list(rel_count.index)
+
+    words = pd.Series(' '.join(df['message']).lower().split())
+    popular_words = words[~words.isin(stopwords.words("english"))].value_counts()[:5]
+    popular_words_label = list(popular_words.index)
     
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
