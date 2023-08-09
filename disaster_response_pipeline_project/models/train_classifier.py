@@ -54,26 +54,35 @@ def tokenize(text):
     - Imput: Complete text as string
     - Output: Clean tokens
     '''
+    tokens = word_tokenize(text)
+    lemmatizer = WordNetLemmatizer()
 
-    # normalizing all the text
-    text = text.lower()
+    clean_tokens = []
+    for tok in tokens:
+        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
+        clean_tokens.append(clean_tok)
 
-    # removing extra characters
-    text = re.sub(r"[^a-zA-Z0-9]", " ", text)
+    return clean_tokens
 
-    # tokenizing all the sentences
-    words = word_tokenize(text)
-
-    # removing stopwords
-    words = [w for w in words if w not in stopwords.words("english")]
-
-    # Reduce words to their stems
-    stemmed = [PorterStemmer().stem(w) for w in words]
-
-    # Lemmatize verbs by specifying pos
-    lemmed = [WordNetLemmatizer().lemmatize(w, pos='v') for w in stemmed]
-
-    return lemmed
+#    # normalizing all the text
+#    text = text.lower()
+#
+#    # removing extra characters
+#    text = re.sub(r"[^a-zA-Z0-9]", " ", text)
+#
+#    # tokenizing all the sentences
+#    words = word_tokenize(text)
+#
+#    # removing stopwords
+#    words = [w for w in words if w not in stopwords.words("english")]
+#
+#    # Reduce words to their stems
+#    stemmed = [PorterStemmer().stem(w) for w in words]
+#
+#    # Lemmatize verbs by specifying pos
+#    lemmed = [WordNetLemmatizer().lemmatize(w, pos='v') for w in stemmed]
+#
+#    return lemmed
 
     
 
