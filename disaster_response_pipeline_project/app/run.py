@@ -48,13 +48,13 @@ def index():
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
 
-#    related = df.related
-#    rel_count = related.value_counts()
-#    related_names = list(rel_count.index)
-#
-#    words = pd.Series(' '.join(df['message']).lower().split())
-#    popular_words = words[~words.isin(stopwords.words("english"))].value_counts()[:5]
-#    popular_words_label = list(popular_words.index)
+    related = df.related
+    rel_count = related.value_counts()
+    related_names = list(rel_count.index)
+
+    words = pd.Series(' '.join(df['message']).lower().split())
+    popular_words = words[~words.isin(stopwords.words("english"))].value_counts()[:5]
+    popular_words_label = list(popular_words.index)
     
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
@@ -77,43 +77,43 @@ def index():
                 }
 
             }
-        }#,
-#        {
-#            'data': [
-#                Bar(
-#                    x= related_names,
-#                    y= rel_count
-#                )
-#            ],
-#
-#            'layout': {
-#                'title': 'Distribution of Message Relevance',
-#                'yaxis': {
-#                    'title': "Count"
-#                },
-#                'xaxis': {
-#                    'title': "Relevance"
-#                }
-#            }
-#        },
-#        {
-#            'data': [
-#                Bar(
-#                    x= popular_words_label,
-#                    y= popular_words
-#                )
-#            ],
-#
-#            'layout': {
-#                'title': 'Top Popular Words',
-#                'yaxis': {
-#                    'title': "Count"
-#                },
-#                'xaxis': {
-#                    'title': "Words"
-#                }
-#            }
-#        }
+        },
+        {
+            'data': [
+                Bar(
+                    x= related_names,
+                    y= rel_count
+                )
+            ],
+
+            'layout': {
+                'title': 'Distribution of Message Relevance',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Relevance"
+                }
+            }
+        },
+        {
+            'data': [
+                Bar(
+                    x= popular_words_label,
+                    y= popular_words
+                )
+            ],
+
+            'layout': {
+                'title': 'Top Popular Words',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Words"
+                }
+            }
+        }
 
     ]
     
