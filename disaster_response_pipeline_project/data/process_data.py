@@ -45,9 +45,8 @@ def clean_data(df):
     # set each value to be the last character of the string
     for column in categories:
         categories[column] = categories[column].str[-1:]
-    
-    # convert column from string to numeric
-    categories[column] = categories[column].astype(int)
+        # convert column from string to numeric
+        categories[column] = categories[column].astype(int)
     
     # drop the original categories column from `df`
     df=df.drop(['categories'], axis=1)
@@ -55,12 +54,16 @@ def clean_data(df):
     # concatenate the original dataframe with the new `categories` dataframe
     df = pd.concat([df, categories],axis=1)
     
-    # drop duplicates
-    df=df.drop_duplicates()
+    # drop duplicates and rows with related==2
+    df = df.loc[df["related"] <= 1 ]
+    df = df.drop_duplicates()
     
     return df
 
 def save_data(df, database_filename):
+    '''
+    Data are stored on an sqllite database in the table Clean_Disaster_Data
+    '''
     engine = create_engine('sqlite:///'+database_filename)
     df.to_sql('Clean_Disaster_Data', engine, index=False)  
 

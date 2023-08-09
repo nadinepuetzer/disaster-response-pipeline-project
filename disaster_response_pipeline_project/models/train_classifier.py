@@ -16,18 +16,22 @@ from nltk.stem import WordNetLemmatizer
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import FeatureUnion
 from sklearn.neighbors import KNeighborsClassifier
-
-
+from sklearn.ensemble import GradientBoostingClassifier
 
 
 def load_data(database_filepath):
+    '''
+    Loads data from database, feature and target variables X and Y are defined
+    - Input: database filepath
+    - Output: X, Y and category names
+    '''
     #load data from database
     engine = create_engine('sqlite:///'+database_filepath)
     df = pd.read_sql_table('Clean_Disaster_Data', engine)  
@@ -41,6 +45,11 @@ def load_data(database_filepath):
 
 
 def tokenize(text):
+    '''
+    Tokenization function to process text data using word tokenization and lemmatizer
+    - Imput: Complete text as string
+    - Output: Clean tokens
+    '''
     tokens = word_tokenize(text)
     lemmatizer = WordNetLemmatizer()
 
@@ -52,95 +61,47 @@ def tokenize(text):
     return clean_tokens
 
 
-#additional Features
-class StartingVerbExtractor(BaseEstimator, TransformerMixin):
+##Additional Features
+# class StartingVerbExtractor(BaseEstimator, TransformerMixin):
 
-    def starting_verb(self, text):
-        sentence_list = nltk.sent_tokenize(text)
-        for sentence in sentence_list:
-            pos_tags = nltk.pos_tag(tokenize(sentence))
-            first_word, first_tag = pos_tags[0]
-            if first_tag in ['VB', 'VBP'] or first_word == 'RT':
-                return True
-        return False
+#     def starting_verb(self, text):
+#         sentence_list = nltk.sent_tokenize(text)
+#         for sentence in sentence_list:
+#             pos_tags = nltk.pos_tag(tokenize(sentence))
+#             first_word, first_tag = pos_tags[0]
+#             if first_tag in ['VB', 'VBP'] or first_word == 'RT':
+#                 return True
+#         return False
 
-    def fit(self, x, y=None):
-        return self
+#     def fit(self, x, y=None):
+#         return self
 
-    def transform(self, X):
-        X_tagged = pd.Series(X).apply(self.starting_verb)
-        return pd.DataFrame(X_tagged)
+#     def transform(self, X):
+#         X_tagged = pd.Series(X).apply(self.starting_verb)
+#         return pd.DataFrame(X_tagged)
     
 
 def build_model():
-    
-    #pipeline parameters
-    parameters = [
-        {
-            'clf': [MultiOutputClassifier(RandomForestClassifier())], 
-    #        'features__text_pipeline__vect__ngram_range': ((1, 1), (1, 2)),
-    #        'features__text_pipeline__tfidf__estimator__stop_words': ['english', None],
-            'clf__estimator__n_estimators': [50, 100, 200],
-            'clf__estimator__min_samples_split': [2, 3, 4]
-        },
-        {
-            'clf': [MultiOutputClassifier(KNeighborsClassifier())],
-    #        'features__text_pipeline__vect__ngram_range': ((1, 1), (1, 2)),
-    #        'features__text_pipeline__tfidf__estimator__stop_words': ['english', None],
-            'clf__estimator__n_neighbors': list(range(1, 31))
-        }
-    ]
+    '''
+    Trains pipeline
+    - Split data into train and test sets
+    - Train pipeline
+    Input: Machine pipeline taking in the `message` column as input and output classification results on the other 36 categories in the dataset and parameters for model hypertuning. 
+    Output: Model using best set of parameters
+    '''
 
-    #evaluating multiple classifiers based on pipeline parameters
-    result=[]
-
-    for params in parameters:
-
-        #classifier
-        clf = params['clf'][0]
-
-        #getting arguments by popping out classifier
-        params.pop('clf')
-
-        #pipeline
-        pipeline = Pipeline([
-            ('features', FeatureUnion([
-
-                ('text_pipeline', Pipeline([
-                    ('vect', CountVectorizer(tokenizer=tokenize)),
-                    ('tfidf', TfidfTransformer())
-                ])),
-
-                ('starting_verb', StartingVerbExtractor())
-            ])),
-
-            ('clf', clf)
-        ])
-
-        #cross validation using GridSearchCV
-        cv = GridSearchCV(pipeline, param_grid=params, cv=2, refit=True, n_jobs=-1)
-        cv.fit(X_train, y_train)
-
-        #storing result
-        result.append\
-        (
-            {
-                'grid': cv,
-                'classifier': cv.best_estimator_,
-                'best score': cv.best_score_,
-                'best params': cv.best_params_,
-                'cv': cv.cv
-            }
-        )
-
-    #sorting result by best score
-    result = sorted(result, key=itemgetter('best score'),reverse=True)
-    model = result[0]['grid']
+    # Perform grid search using the pipeline
+    model = GridSearchCV(pipeline, param_grid=parameters, cv=3, n_jobs=-1)
 
     return model
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
+    '''
+    Reports the accuracy, precision and recall for each output category of the dataset and an overall model quality.
+    - Input: model, X_test, Y_test and list of categories
+    - Output: model evaluation for each category stored in Dataframe
+    '''
     #Predictions
     Y_pred = model.predict(X_test)
 
@@ -148,21 +109,30 @@ def evaluate_model(model, X_test, Y_test, category_names):
     model_eval = pd.DataFrame(columns=['target_category','accuracy','precision','recall'])
 
     for col in range(0,len(category_names)):
-        report = classification_report(Y_test.values[col], Y_pred[col],output_dict=True)
-        #print("Category: {}, Accuracy: {:0.2f}, Precision: {:0.2f}, Recall: {:0.2f}".format(category_names[col],report['accuracy'], report['macro avg']['precision'], report['macro avg']['recall']))
-        result = pd.DataFrame({"target_category":category_names[col],
+    
+        report = classification_report(Y_test.values[col], Y_pred[col],output_dict=True,zero_division=0.0)
+        result_dict = {"target_category":category_names[col],
                     "accuracy":report['accuracy'], 
                     "precision": report['macro avg']['precision'],
                     "recall": report['macro avg']['recall']
-                    })
-        model_eval.append(result)
-        print('Model Accuracy: ',model_eval['accuracy'].mean(),'(+/- ', model_eval['accuracy'].std(),')/n ' /
-              'Model Precision: ',model_eval['precision'].mean(),'(+/- ', model_eval['precision'].std(),')/n ' /
-              'Model Recall: ',model_eval['recall'].mean(),'(+/- ', model_eval['recall'].std(),')' )
-              
+                    }
+        result = pd.DataFrame([result_dict])
+        print(result)
+        model_eval = model_eval.append(result)
 
+    print('......\n'
+          'Model Quality:\n '
+          'Model Accuracy: ',model_eval['accuracy'].mean(),'(+/- ', model_eval['accuracy'].std(),')\n ' 
+          'Model Precision: ',model_eval['precision'].mean(),'(+/- ', model_eval['precision'].std(),')\n ' 
+          'Model Recall: ',model_eval['recall'].mean(),'(+/- ', model_eval['recall'].std(),')' )
+
+    return model_eval
+  
 
 def save_model(model, model_filepath):
+    '''
+    Exports model as a pickle file
+    '''
     #saving best classifier as pickle
     joblib.dump(model, model_filepath)
 
@@ -174,17 +144,52 @@ def main():
         X, Y, category_names = load_data(database_filepath)
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
         
+        #define the pipeline with transformers and models
+        pipeline =  Pipeline([
+                ('vect', CountVectorizer(tokenizer=tokenize)),
+                ('tfidf', TfidfTransformer()),
+                ('clf', MultiOutputClassifier(RandomForestClassifier()))
+            ])
+        
+        parameters = {
+                'clf__estimator__n_estimators': [50, 100, 200],
+                'clf__estimator__max_depth': [None, 5, 10, 20],
+                'clf__estimator__min_samples_split': [2, 3, 4]
+            }   
+        
+
+        pipeline2 =  Pipeline([
+                ('vect', CountVectorizer(tokenizer=tokenize)),
+                ('tfidf', TfidfTransformer()),
+                ('clf', MultiOutputClassifier(KNeighborsClassifier()))
+            ])
+
+        parameters2 = {
+                'clf__estimator__n_neighbors': list(range(1, 31))
+            }  
+
         print('Building model...')
-        model = build_model()
+        model1 = build_model(pipeline, parameters)
+        model2 = build_model(pipeline2, parameters2)
         
         print('Training model...')
-        model.fit(X_train, Y_train)
-        
+        model1.fit(X_train, Y_train)
+        model2.fit(X_train, Y_train)
+
         print('Evaluating model...')
-        evaluate_model(model, X_test, Y_test, category_names)
+        result1 = evaluate_model(model1, X_test, Y_test, category_names)
+        result2 = evaluate_model(model2, X_test, Y_test, category_names)
+
+        # determine the best model
+        print('Determine best model...')
+        if result1['accuracy'].mean() > result2['accuracy'].mean():
+            best_model = model1
+        elif result1['accuracy'].mean() < result2['accuracy'].mean():
+            best_model = model2
+        print('Best Model is {}.'.format(best_model))
 
         print('Saving model...\n    MODEL: {}'.format(model_filepath))
-        save_model(model, model_filepath)
+        save_model(best_model, model_filepath)
 
         print('Trained model saved!')
 
