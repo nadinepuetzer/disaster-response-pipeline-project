@@ -30,3 +30,6 @@ Exports the final model as a pickle file
 
 ### 3. Flask Web App
 A Flask web app is provided, that can be executed with the run.py script. It includes an input field for a message that you would like to be classified with its results and it shows some visualizations to the training data.
+
+#### Link to GitHub Repository:
+https://github.com/nadinepuetzer/disaster-response-pipeline-project
